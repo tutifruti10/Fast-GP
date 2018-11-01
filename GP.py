@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.spatial.distance import cdist, pdist, squareform
 
 class GP():
 	def __init__(self, kernel, mean=None):
@@ -32,6 +33,7 @@ class GP():
 			if plot:
 				plt.plot(Xpredict,f_prior)
 				plt.show()
+			return f_prior
 		else:
 			if self.L_trained is None:
 				raise ValueError('GP not trained; please use the add_training function to train it')
@@ -45,7 +47,7 @@ class GP():
 			stdv = np.sqrt(s2)
 			
 			L = np.linalg.cholesky(K_ss + 1e-6*np.eye(Xpredict.shape[0])- np.dot(Ls.T,Ls))
-			f_post = mu.reshape(-1,1) + np.dot(L, np.random.normal(size=(Xpredict.shape[0],3)))
+			f_post = mu.reshape(-1,1) + np.dot(L, np.random.normal(size=(Xpredict.shape[0],n)))
 			
 			if plot:
 				plt.plot(self.Xtrain,self.Ytrain,'bs',ms=8)
@@ -54,9 +56,17 @@ class GP():
 				plt.plot(Xpredict,mu,'r--',lw=2)
 				plt.show()
 	
+			return f_post
 		
 		
-		
-def sqexp(a,b,l=0.5,sig=1):
-	sqdist = np.sum(a**2,1).reshape(-1,1) + np.sum(b**2,1) - 2*np.dot(a,b.T)
-	return sig*np.exp(-0.5 * (1/l) * sqdist)
+def sqexp(a,b=None,l=0.5,sig=1):
+	if b is None:
+		sqdist = pdist(a/l,metric='sqeuclidean')
+		return sig*squareform(np.exp(-.5*sqdist))
+	else:
+		sqdist=cdist(a/l,b/l,metric='sqeuclidean')
+		return sig*np.exp(-0.5 * sqdist)
+	
+	
+
+	

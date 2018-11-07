@@ -5,8 +5,8 @@ from operator import itemgetter
 from scipy.optimize import fmin_l_bfgs_b
 
 class GP():
-	def __init__(self, kernel_, mean=None, opt="fmin_l_bfgs_b",n_rest_opt = 0):
-		self.kernel_ = kernel_
+	def __init__(self, kernel, mean=None, opt="fmin_l_bfgs_b",n_rest_opt = 0):
+		self.kernel= kernel
 		self.mean = mean
 		self.opt=opt
 		self.n_rest_opt=n_rest_opt
@@ -19,7 +19,7 @@ class GP():
 		
 		
 	def add_training(self,Xtrain,Ytrain,params):
-		#pass parameters as par=(np.array((0.6,1.)),np.array((0.5,1.)))
+		#par=(np.array((0.6,1.)),[(0.5,1.)])
 		self.Xtrain = Xtrain
 		self.Ytrain=Ytrain
 		self.trained=True
@@ -27,29 +27,21 @@ class GP():
 		theta_in=self.params[0][0]
 		sig=self.params[0][1]
 		bounds=self.params[1]
-		#fix function 
-		def  fun_opt(self,theta=None):
-				sig=1
-				par=np.array((theta,sig))
-				self.K =  self.kernel.get_kernel(self.kernel_(np.array([0.6, 1. ])),Xtrain,Xtrain)
-				L=np.linalg.cholesky(self.K + 1e-6*np.eye(Xtrain.shape[0]))
-				lml=-0.5*np.dot(np.linalg.solve(L,Ytrain).T,np.linalg.solve(L,Ytrain))-np.sum(np.log(np.diagonal(L)),axis=0)-(Xtrain.shape[0]/2)*np.log(2*np.pi)
-				return -lml
-		
-		theta_opt, func_min, convergence_dict = fmin_l_bfgs_b(fun_opt,theta_in, bounds)
+		kr=self.kernel(*params)
+		theta=self.kernel.theta(kr)
+		def  fun_opt(self,theta):
+				theta=self.kernel.theta(kr)
+				log_like=self.lml(theta)
+				return log_like 
+		theta_opt, func_min, convergence_dict = [fmin_l_bfgs_b(fun_opt,x0=theta_in, bounds=bounds)]
 		lml_values = list(map(itemgetter(1), theta_opt))
 		self.params[0][0] = theta_opt[np.argmin(lml_values)]
 		return self.params[0][0]
-		self.K =  self.kernel.get_kernel(self.kernel(*params),Xtrain,Xtrain)
-		L = np.linalg.cholesky(self.K + 1e-6*np.eye(Xtrain.shape[0]))
-		self.L_trained = L
-		self.params = params
-		return L
           #  self.log_marginal_likelihood_value_ = -np.min(lml_values)
 
 	def predict(self,Xpredict,params,plot=True, n=3):
-		kernel_ = self.kernel_
-		K_ss = self.kernel.get_kernel(self.kernel_(*params),Xpredict,Xpredict)
+		kernel_ = self.kernel
+		K_ss = self.kernel.get_kernel(self.kernel(*params),Xpredict,Xpredict)
 		if not self.trained:
 			L_ss = np.linalg.cholesky(K_ss + 0.00005*np.eye(Xpredict.shape[0]))
 			f_prior = np.dot(L_ss, np.random.normal(size=(Xpredict.shape[0],n)))
@@ -80,9 +72,16 @@ class GP():
 				plt.show()
 	
 			return f_post
-
+	def lml (self,theta=None):
+				sig=1
+				par=np.array((theta,sig))
+				ker=self.kernel.get_clone(theta)
+				K =  self.kernel.get_kernel(ker,Xtrain,Xtrain)
+				L=np.linalg.cholesky(K + 1e-6*np.eye(Xtrain.shape[0]))
+				log_like=-0.5*np.dot(np.linalg.solve(L,Ytrain).T,np.linalg.solve(L,Ytrain))-np.sum(np.log(np.diagonal(L)),axis=0)-(Xtrain.shape[0]/2)*np.log(2*np.pi)
+				return log_like
         
-class kernel():
+class Kernel():
 	def __init__(self,params,params_bounds=None):
 				self.params=params
 				self.params_bounds=params_bounds
@@ -93,7 +92,7 @@ class kernel():
 	def theta(self):
 			return self.params[0]
 				
-class sqexp(kernel):
+class sqexp(Kernel):
 	def __init__(self,params,params_bounds=None):
 		self.params=params
 		self.params_bounds=params_bounds
@@ -113,3 +112,6 @@ class sqexp(kernel):
 		else:
 			sqdist=cdist(a/self.l,b/self.l,metric='sqeuclidean')
 			return self.sig*np.exp(-0.5 * sqdist)
+		def get_clone(theta):
+			cloned= sqexp(copy.deepcopy(self, theta))
+			return cloned

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial.distance import cdist, pdist, squareform
 from operator import itemgetter
 from scipy.optimize import fmin_l_bfgs_b
+import copy
 
 class GP():
 	def __init__(self, kernel, mean=None, opt="fmin_l_bfgs_b",n_rest_opt = 0):
@@ -19,7 +20,6 @@ class GP():
 		
 		
 	def add_training(self,Xtrain,Ytrain,params):
-		#par=(np.array((0.6,1.)),[(0.5,1.)])
 		self.Xtrain = Xtrain
 		self.Ytrain=Ytrain
 		self.trained=True
@@ -33,8 +33,8 @@ class GP():
 				theta=self.kernel.theta(kr)
 				log_like=self.lml(theta)
 				return log_like 
-		theta_opt, func_min, convergence_dict = [fmin_l_bfgs_b(fun_opt,x0=theta_in, bounds=bounds)]
-		lml_values = list(map(itemgetter(1), theta_opt))
+		theta_opt, func_min, convergence_dict = [fmin_l_bfgs_b(fun_opt(self,theta),x0=theta_in, bounds=bounds)]
+		lml_values = list(map(itemgetter(1),theta_opt))
 		self.params[0][0] = theta_opt[np.argmin(lml_values)]
 		return self.params[0][0]
           #  self.log_marginal_likelihood_value_ = -np.min(lml_values)
@@ -72,13 +72,14 @@ class GP():
 				plt.show()
 	
 			return f_post
-	def lml (self,theta=None):
+	def lml (self,theta):
 				sig=1
+				theta_in=self.params[0][0]
 				par=np.array((theta,sig))
-				ker=self.kernel.get_clone(theta)
-				K =  self.kernel.get_kernel(ker,Xtrain,Xtrain)
-				L=np.linalg.cholesky(K + 1e-6*np.eye(Xtrain.shape[0]))
-				log_like=-0.5*np.dot(np.linalg.solve(L,Ytrain).T,np.linalg.solve(L,Ytrain))-np.sum(np.log(np.diagonal(L)),axis=0)-(Xtrain.shape[0]/2)*np.log(2*np.pi)
+				ker=self.kernel(par)
+				K =  self.kernel.get_kernel(ker,self.Xtrain,self.Xtrain)
+				L=np.linalg.cholesky(K + 1e-6*np.eye(self.Xtrain.shape[0]))
+				log_like=-0.5*np.dot(np.linalg.solve(L,self.Ytrain).T,np.linalg.solve(L,self.Ytrain))-np.sum(np.log(np.diagonal(L)),axis=0)-(self.Xtrain.shape[0]/2)*np.log(2*np.pi)
 				return log_like
         
 class Kernel():
@@ -112,6 +113,3 @@ class sqexp(Kernel):
 		else:
 			sqdist=cdist(a/self.l,b/self.l,metric='sqeuclidean')
 			return self.sig*np.exp(-0.5 * sqdist)
-		def get_clone(theta):
-			cloned= sqexp(copy.deepcopy(self, theta))
-			return cloned

@@ -40,6 +40,11 @@ class GP():
 		lml_values = list(map(itemgetter(1), theta_opt))
 		self.params[0][0] = theta_opt[np.argmin(lml_values)]
 		return self.params[0][0]
+		self.K =  self.kernel.get_kernel(self.kernel(*params),Xtrain,Xtrain)
+		L = np.linalg.cholesky(self.K + 1e-6*np.eye(Xtrain.shape[0]))
+		self.L_trained = L
+		self.params = params
+		return L
           #  self.log_marginal_likelihood_value_ = -np.min(lml_values)
 
 	def predict(self,Xpredict,params,plot=True, n=3):

@@ -33,7 +33,7 @@ class GP():
 				theta=self.kernel.theta(kr)
 				log_like=self.lml(theta)
 				return log_like 
-		theta_opt, func_min, convergence_dict = [fmin_l_bfgs_b(fun_opt(self,theta),x0=theta_in, bounds=bounds)]
+		theta_opt, func_min, convergence_dict = [fmin_l_bfgs_b(fun_opt,x0=theta_in, bounds=bounds)]
 		lml_values = list(map(itemgetter(1),theta_opt))
 		self.params[0][0] = theta_opt[np.argmin(lml_values)]
 		return self.params[0][0]

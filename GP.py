@@ -19,6 +19,7 @@ class GP():
 		
 		
 	def add_training(self,Xtrain,Ytrain,params):
+		#pass parameters as par=(np.array((0.6,1.)),np.array((0.5,1.)))
 		self.Xtrain = Xtrain
 		self.Ytrain=Ytrain
 		self.trained=True

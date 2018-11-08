@@ -17,19 +17,19 @@ class GP():
 		self.trained=False
 		self.L_trained = None
 		self.params=None
+		self.bounds=None
 		
-		
-	def add_training(self,Xtrain,Ytrain,params):
+	def add_training(self,Xtrain,Ytrain,par,bounds):
 		self.Xtrain = Xtrain
 		self.Ytrain=Ytrain
 		self.trained=True
-		self.params=params
-		theta_in=self.params[0][0]
-		bounds=self.params[1]
-		theta_opt, func_min, convergence_dict = fmin_l_bfgs_b(self.lml,x0=0.1, approx_grad=True,bounds=bounds)
+		self.par=params
+		theta_in=self.params[0]
+		self.bounds=bounds
+		theta_opt, func_min, convergence_dict = fmin_l_bfgs_b(self.lml,x0=0.1, approx_grad=True,bounds=self.bounds)
 		lml_values = list(map(itemgetter(1),theta_opt))
-		self.params[0][0] = theta_opt[np.argmin(lml_values)]
-		return self.params[0][0]
+		opt= theta_opt[np.argmin(lml_values)]
+		return opt
           #  self.log_marginal_likelihood_value_ = -np.min(lml_values)
 
 	def predict(self,Xpredict,params,plot=True, n=3):
@@ -47,7 +47,7 @@ class GP():
 				raise ValueError('GP not trained; please use the add_training function to train it')
 			else:
 				Lt = self.L_trained
-			Ks = self.kernel.get_kernel(self.kernel_(*params),self.Xtrain,Xpredict)
+			Ks = self.kernel.get_kernel(self.kernel(*par),self.Xtrain,Xpredict)
 			Ls = np.linalg.solve(Lt,Ks)	
 			mu=np.dot(Ls.T, np.linalg.solve(Lt,self.Ytrain)).reshape((Xpredict.shape[0],))
 			
@@ -65,19 +65,20 @@ class GP():
 				plt.show()
 	
 			return f_post
+			
 	def lml(self,theta):
 				sig=1
-				par=np.array((theta,sig))
-				self.kernel.params=par
-				K =  self.kernel.get_kernel(self.Xtrain,self.Xtrain)
+				kern = copy.deepcopy(self.kernel)
+				kern.params=np.array((theta,sig))
+				K =  kern.get_kernel(self.Xtrain,self.Xtrain)
 				L=np.linalg.cholesky(K + 1e-6*np.eye(self.Xtrain.shape[0]))
 				log_like=0.5*np.dot(np.linalg.solve(L,self.Ytrain).T,np.linalg.solve(L,self.Ytrain))-np.sum(np.log(np.diagonal(L)),axis=0)-(self.Xtrain.shape[0]/2)*np.log(2*np.pi)
 				return log_like
         
 class Kernel():
 	def __init__(self,params,params_bounds=None):
-				self.params=params
-				self.params_bounds=params_bounds
+			self.params=params
+			self.params_bounds=params_bounds
 	def get_par(self):
 		return self.params
 	def get_bounds(self):
@@ -87,19 +88,11 @@ class Kernel():
 				
 class sqexp(Kernel):
 	def __init__(self,params,params_bounds=None):
-		self.params=params
-		self.params_bounds=params_bounds
-		self.a=None
-		self.b=None
-		self.l=None
-		self.sig=None
-		self.hp=None
+			self.params_list=['sig','len']
 	def get_kernel(self,a,b=None):
-		self.l=self.params[0][0]
-		self.sig=self.params[0][1]
 		if b is None:
-			sqdist = pdist(a/self.l,metric='sqeuclidean')
-			return self.sig*squareform(np.exp(-.5*sqdist))
+			sqdist = pdist(a/self.params[0],metric='sqeuclidean')
+			returnself.params[1]*squareform(np.exp(-.5*sqdist))
 		else:
-			sqdist=cdist(a/self.l,b/self.l,metric='sqeuclidean')
-			return self.sig*np.exp(-0.5 * sqdist)
+			sqdist=cdist(a/self.params[0],b/self.params[0],metric='sqeuclidean')
+			return params[1]**np.exp(-0.5 * sqdist)

@@ -25,15 +25,8 @@ class GP():
 		self.trained=True
 		self.params=params
 		theta_in=self.params[0][0]
-		sig=self.params[0][1]
 		bounds=self.params[1]
-		kr=self.kernel(*params)
-		theta=self.kernel.theta(kr)
-		def  fun_opt(self,theta):
-				theta=self.kernel.theta(kr)
-				log_like=self.lml(theta)
-				return log_like 
-		theta_opt, func_min, convergence_dict = [fmin_l_bfgs_b(fun_opt,x0=theta_in, bounds=bounds)]
+		theta_opt, func_min, convergence_dict = fmin_l_bfgs_b(self.lml,x0=0.1, approx_grad=True,bounds=bounds)
 		lml_values = list(map(itemgetter(1),theta_opt))
 		self.params[0][0] = theta_opt[np.argmin(lml_values)]
 		return self.params[0][0]
@@ -72,14 +65,13 @@ class GP():
 				plt.show()
 	
 			return f_post
-	def lml (self,theta):
+	def lml(self,theta):
 				sig=1
-				theta_in=self.params[0][0]
 				par=np.array((theta,sig))
-				ker=self.kernel(par)
-				K =  self.kernel.get_kernel(ker,self.Xtrain,self.Xtrain)
+				self.kernel.params=par
+				K =  self.kernel.get_kernel(self.Xtrain,self.Xtrain)
 				L=np.linalg.cholesky(K + 1e-6*np.eye(self.Xtrain.shape[0]))
-				log_like=-0.5*np.dot(np.linalg.solve(L,self.Ytrain).T,np.linalg.solve(L,self.Ytrain))-np.sum(np.log(np.diagonal(L)),axis=0)-(self.Xtrain.shape[0]/2)*np.log(2*np.pi)
+				log_like=0.5*np.dot(np.linalg.solve(L,self.Ytrain).T,np.linalg.solve(L,self.Ytrain))-np.sum(np.log(np.diagonal(L)),axis=0)-(self.Xtrain.shape[0]/2)*np.log(2*np.pi)
 				return log_like
         
 class Kernel():
@@ -103,10 +95,8 @@ class sqexp(Kernel):
 		self.sig=None
 		self.hp=None
 	def get_kernel(self,a,b=None):
-		self.a=a	
-		self.b=b
-		self.l=self.params[0]
-		self.sig=self.params[1]
+		self.l=self.params[0][0]
+		self.sig=self.params[0][1]
 		if b is None:
 			sqdist = pdist(a/self.l,metric='sqeuclidean')
 			return self.sig*squareform(np.exp(-.5*sqdist))

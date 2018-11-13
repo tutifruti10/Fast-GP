@@ -17,5 +17,10 @@ f=a.predict(Xpredict,params,plot=False,n=1)
 fig=plt.figure()
 ax=fig.gca(projection='3d')
 
-surf=ax.plot_surface(Xpredict[:,0],Xpredict[:,1],f)
+surf=ax.scatter(Xpredict[:,0],Xpredict[:,1],f)
 plt.show()
+
+FOR THE OPTIMIZER
+params=np.array((1.,1.))
+bounds=[(0.,1.5)]
+a.add_training(Xtrain,Ytrain,params,bounds)

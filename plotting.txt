@@ -21,6 +21,20 @@ surf=ax.scatter(Xpredict[:,0],Xpredict[:,1],f)
 plt.show()
 
 FOR THE OPTIMIZER
+N=100
+n=50
+step=(5+5)/n
+Xtrain=np.array((np.random.uniform(-3,3,N),np.random.uniform(-3,3,N))).reshape(-1,2)
+Ytrain=np.sin(Xtrain[:,0]) + Xtrain[:,1]
+Xpredict=np.mgrid[-5:5:step,-5:5:step].reshape(2,n**2).T 
 params=np.array((1.,1.))
-bounds=[(0.,1.5)]
+bounds=[(0.,1.5),(0.0001,5.)]
+a=gp.GP(gp.sqexp,opt="fmin_l_bfgs_b",n_rest_opt = 2)
 a.add_training(Xtrain,Ytrain,params,bounds)
+f=a.predict(Xpredict,params,plot=False,n=1)
+
+fig=plt.figure()
+ax=fig.gca(projection='3d')
+surf=ax.scatter(Xpredict[:,0],Xpredict[:,1],f)
+surf1=ax.scatter(Xtrain[:,0],Xtrain[:,1],Ytrain.reshape(N,1))
+plt.show()

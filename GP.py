@@ -26,24 +26,20 @@ class GP():
 		self.par=par
 		theta_in=self.par[0]
 		self.bounds=bounds
-		def lml(theta):
-				sig=1
-				par=np.array((theta,sig))
-				K=self.kernel(Xtrain,Xtrain,*par)
+		def lml(*theta):
+				K=self.kernel(Xtrain,Xtrain,*theta)
 				L=np.linalg.cholesky(K + 1e-6*np.eye(self.Xtrain.shape[0]))
 				log_like=-0.5*np.dot(np.linalg.solve(L,self.Ytrain).T,np.linalg.solve(L,self.Ytrain))-np.sum(np.log(np.diagonal(L)),axis=0)-(self.Xtrain.shape[0]/2)*np.log(2*np.pi)
-				print('log_like',-log_like)
 				return -log_like
-		optima= [fmin_l_bfgs_b(lml,x0=theta_in, approx_grad=True,bounds=self.bounds)]
+		optima= [fmin_l_bfgs_b(lml,x0=par, approx_grad=True,bounds=self.bounds)]
 		bounds=np.array(self.bounds)
 		for iteration in range(self.n_rest_opt):
                     theta_initial =\
                         np.random.uniform(bounds[:,0],bounds[:,1])
-                    optima.append(fmin_l_bfgs_b(lml,x0=theta_in, approx_grad=True,bounds=self.bounds))
-                    print('Theta=',theta_initial )
+                    optima.append(fmin_l_bfgs_b(lml,x0=theta_initial, approx_grad=True,bounds=self.bounds))
 		lml_values = list(map(itemgetter(1),optima))
 		opt= optima[np.argmin(lml_values)][0]
-		self.par[0]= opt
+		self.par= opt
 		self.K = self.kernel(Xtrain,Xtrain,*self.par)
 		L = np.linalg.cholesky(self.K + 1e-6*np.eye(Xtrain.shape[0]))
 		self.L_trained = L

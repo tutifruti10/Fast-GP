@@ -77,16 +77,8 @@ class GP():
 				plt.plot(Xpredict,mu,'r--',lw=2)
 				plt.show()
 			
-			return f_post
-"""		
-def sqexp(a,b=None,l=0.5,sig=1):
-	if b is None:
-		sqdist = pdist(a/l,metric='sqeuclidean')
-		return sig*squareform(np.exp(-.5*sqdist))
-	else:
-		sqdist=cdist(a/l,b/l,metric='sqeuclidean')
-		return sig*np.exp(-0.5 * sqdist)
-"""
+			return f_post,mu,stdv
+
 class Kernel():
 	def __init__(self,params,params_bounds=None):
 			self.params=params

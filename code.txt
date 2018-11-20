@@ -1,0 +1,36 @@
+import GP3 as gp
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+from scipy.stats import uniform
+
+n=50
+step=(5+5)/n
+Ntrain=10
+rv=uniform(-4.5,9)
+Xpredict=np.mgrid[-5:5:step,-5:5:step].reshape(2,n**2).T
+Xtrain=rv.rvs([Ntrain,2])
+rv=uniform(-4,2)
+t=rv.rvs([Ntrain,2])
+Xtrain=np.vstack((Xtrain,t))
+Ytrain=np.sin(Xtrain[:,0]) + Xtrain[:,1]
+params=np.array((1.,1.))
+bounds=np.array(((0.00001,5),(0.0001,5)))
+
+
+a=gp.GP(gp.sqexp)
+a.add_training(Xtrain,Ytrain,params,bounds)
+f,mu,std=a.predict(Xpredict,plot=False,n=1)
+
+fig=plt.figure()
+ax=fig.gca(projection='3d')
+
+train=ax.scatter(Xtrain[:,0],Xtrain[:,1],Ytrain,c='r')
+surf=ax.scatter(Xpredict[:,0],Xpredict[:,1],f,cmap=cm.coolwarm,linewidth=0,antialiased=False)
+t=ax.scatter(Xpredict[:,0],Xpredict[:,1],(np.sin(Xpredict[:,0]) + Xpredict[:,1]),c='g')
+lower=ax.scatter(Xpredict[:,0],Xpredict[:,1],mu-2*std,c='k')
+upper=ax.scatter(Xpredict[:,0],Xpredict[:,1],mu+2*std,c='k')
+
+plt.show()
+

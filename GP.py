@@ -88,7 +88,7 @@ class GP():
 				plt.plot(Xpredict,mu,'r--',lw=2)
 				plt.show()
 			
-			return f_post
+			return f_post, mu, stdv
 
 class Kernel():
 	def __init__(self,params,params_bounds=None):

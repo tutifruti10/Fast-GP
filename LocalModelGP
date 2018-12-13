@@ -1,0 +1,72 @@
+# author: Franziska Meier
+import numpy as np
+from numpy import dot
+from scipy.linalg import cholesky, inv
+from matplotlib import pyplot as plt
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
+
+class LocalModel(object):
+
+    def __init__(self, opt, D, K, lmD):
+        self.K = K
+        self.lmD = lmD
+        self.D = D
+        self.opt = opt
+
+        self.set_initial_state()
+
+    def set_initial_state(self):
+        self.center = np.array(self.lmD)
+        self.lm=None #added, to save the local gp trained maybe.. who knows
+        self.X=None
+        self.Y=None
+        self.lengthscale = np.ones((1, self.lmD)) * self.opt.init_lambda
+		
+        self.muw = np.zeros((self.K, 1))
+        self.Sigmaw = np.zeros((self.K, self.K))
+        self.alpha_b_N = np.ones(self.K) * self.opt.alpha_b_0
+        self.UsedK = np.arange(self.K, dtype=int)
+
+        self.betaf_a_N = self.opt.betaf_a_0
+        self.betaf_b_N = self.opt.betaf_b_0
+        self.alpha_a_N = self.opt.alpha_a_0
+        self.num_data = 0
+        self.eta = self.opt.init_eta
+        self.kernel=C(1.0, (1e-3, 1e3)) * RBF(10, (1e-2, 1e2))
+        self.gp= GaussianProcessRegressor(kernel=self.kernel, n_restarts_optimizer=9)
+        return
+
+    def init_lm(self, c, X=None, y=None): #kind of changed to defining  a GP
+        self.center = c
+        kernel = C(1.0, (1e-3, 1e3)) * RBF(10, (1e-2, 1e2))
+        self.kerenl=kernel
+        gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=9)
+        self.gp=gp
+        if (X is not None) and (y is not None):
+        	self.X=X
+        	self.Y=y
+        	dist = X - c   # subtract center from each input data point
+        	gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=9)
+        	self.lm=gp.fit(dist, y)
+        	self.kernel=gp.kernel_
+        return
+        
+    def predict(self, X):
+    	dist=X-self.center
+    	y_pred, sigma = self.gp.predict(dist, return_std=True)
+    	return y_pred, sigma
+    	
+    def get_activation(self, X):
+    	dist=X-self.center
+    	kernel=self.kernel
+    	return np.diag(kernel(X))
+    	
+    def update(self, X=None, y=None): #kind of changed to defining  a GP
+        c=self.center 
+        gp=self.gp
+        if (X is not None) and (y is not None):
+        	dist = X - c   # subtract center from each input data point
+        	self.gp=gp.fit(dist, y)
+        	self.kernel=self.gp.kernel_
+        return
